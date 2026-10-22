@@ -1,0 +1,161 @@
+@startuml class-diagram
+!pragma layout smetana
+title TCP Chat - Class Diagram
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+hide empty members
+
+package "TCPServer  (ma.aui.chat.server)" as SRV {
+  class TCPServer <<entry point>> {
+    + {static} main(args : String[])
+  }
+
+  package "config" as sconfig {
+    class ServerConfig <<record>> {
+      + host : String
+      + port : int
+      + source : String
+      + {static} load() : ServerConfig
+    }
+  }
+
+  package "model  (no JavaFX)" as SM {
+    interface ServerListener {
+      + onLog(message : String)
+      + onClientConnected(username : String, readOnly : boolean)
+      + onClientDisconnected(username : String)
+    }
+    class ChatServer {
+      - host : String
+      - port : int
+      - clients : Map<String, ClientHandler>
+      - clientExecutor : ExecutorService  <<virtual threads>>
+      - running : boolean
+      + start()
+      + stop()
+      + getPort() : int
+      + getActiveUsers() : List<String>
+      ~ register(c : ClientHandler) : boolean
+      ~ unregister(c : ClientHandler)
+      ~ broadcast(line : String)
+    }
+    class ClientHandler <<Runnable>> {
+      - socket : Socket
+      - username : String
+      - readOnly : boolean
+      + run()
+      - handshake(firstLine : String) : boolean
+      - handleMessage(text : String)
+      ~ send(line : String)
+    }
+    class "Protocol" as SProtocol <<utility>> {
+      + {static} encode(type, fields...) : String
+      + {static} decode(line) : List<String>
+      + {static} validateUsername(name) : String
+    }
+  }
+
+  package "view  (JavaFX)" as sview {
+    class ServerApp <<Application>> {
+      + start(stage : Stage)
+      + stop()
+    }
+    class ServerView {
+      - root : GridPane
+      - logView : ListView<String>
+      - users : ObservableList<String>
+      - userColors : Map<String, String>
+      + showOnline(host, port)
+      + showOffline()
+    }
+  }
+}
+
+package "TCPClient  (ma.aui.chat.client)" as CLI {
+  class TCPClient <<entry point>> {
+    + {static} main(args : String[])
+  }
+
+  package "config " as cconfig {
+    class ClientConfig <<record>> {
+      + host : String
+      + port : int
+      + {static} resolve(args : String[]) : ClientConfig
+    }
+  }
+
+  package "model  (no JavaFX) " as CM {
+    interface ChatClientListener {
+      + onConnected(username, readOnly)
+      + onRejected(reason)
+      + onConnectionFailed(reason)
+      + onChatMessage(m : ChatMessage)
+      + onSystemMessage(text)
+      + onUserList(users : List<String>)
+      + onError(text)
+      + onDisconnected(reason, byUser)
+    }
+    class ChatClient {
+      - socket : Socket
+      - username : String
+      - readOnly : boolean
+      - connected : boolean
+      + connect(username : String)
+      + submit(input : String)
+      + leave()
+    }
+    class ChatMessage <<record>> {
+      + time : String
+      + sender : String
+      + text : String
+      + mine : boolean
+    }
+    class "Protocol" as CProtocol <<utility>>
+  }
+
+  package "view  (JavaFX) " as cview {
+    class ClientApp <<Application>> {
+      - join(username : String)
+      - leave()
+    }
+    class LoginView {
+      + setBusy(busy)
+      + showError(text)
+    }
+    class ChatView {
+      - root : GridPane
+      - statusDot : Circle
+      + addMessage(m : ChatMessage)
+      + addSystem(text)
+      + addUserList(users)
+      + showOffline(reason)
+    }
+  }
+}
+
+TCPServer ..> ServerApp : launches
+ServerApp --> ChatServer : creates & controls
+ServerApp --> ServerView : creates
+ServerApp ..> ServerConfig : loads
+ServerView ..|> ServerListener
+ChatServer --> "1" ServerListener : notifies
+ChatServer "1" *-- "0..*" ClientHandler : manages
+ClientHandler --> ChatServer : broadcast / register
+ClientHandler ..> SProtocol
+ChatServer ..> SProtocol
+
+TCPClient ..> ClientConfig : validates args
+TCPClient ..> ClientApp : launches
+ClientApp ..|> ChatClientListener
+ClientApp ..> ClientConfig : resolves
+ClientApp --> ChatClient : creates & drives
+ClientApp --> LoginView
+ClientApp --> ChatView
+ChatClient --> "1" ChatClientListener : notifies
+ChatClient ..> ChatMessage : creates
+ChatClient ..> CProtocol
+ChatView ..> ChatMessage : displays
+
+ChatClient .right.> ClientHandler : TCP socket\n(line protocol)
+@enduml

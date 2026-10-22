@@ -1,0 +1,42 @@
+@startuml deployment-diagram
+!pragma layout smetana
+title TCP Chat - Deployment Diagram
+skinparam shadowing false
+
+node "Server machine" as SM <<device>> {
+  node "JVM 21+" <<execution environment>> {
+    artifact "TCPServer.jar" as SJ
+    component "ChatServer\n(ServerSocket :3000)" as CS
+    component "ClientHandler x N\n(one virtual thread each)" as CH
+  }
+  file "server.properties\n(server.host, server.port)" as SP
+}
+
+node "Client machine 1" as C1 <<device>> {
+  node "JVM 21+ " <<execution environment>> {
+    artifact "TCPClient.jar" as CJ1
+  }
+  file "client.properties\n(optional fallback)" as CP1
+}
+
+node "Client machine 2" as C2 <<device>> {
+  node "JVM 21+  " <<execution environment>> {
+    artifact "TCPClient.jar " as CJ2
+  }
+}
+
+node "Client machine N" as CN <<device>> {
+  node "JVM 21+   " <<execution environment>> {
+    artifact "TCPClient.jar  " as CJN
+  }
+}
+
+SJ ..> SP : reads at startup
+CJ1 ..> CP1 : reads if no CLI args
+SJ -- CS
+CS -- CH
+
+CJ1 -- CH : <<TCP/IP>>\nport 3000
+CJ2 -- CH : <<TCP/IP>>\nport 3000
+CJN -- CH : <<TCP/IP>>\nport 3000
+@enduml

@@ -1,0 +1,57 @@
+@startuml sequence-diagram
+title TCP Chat - Join, send a message, allUsers, leave
+skinparam shadowing false
+autonumber
+
+actor Alice
+participant "ChatView\n(Alice)" as AV
+participant "ChatClient\n(Alice)" as AC
+participant "ClientHandler\n(Alice, virtual thread)" as AH
+participant "ChatServer" as S
+participant "ClientHandler\n(Bob)" as BH
+participant "ChatClient\n(Bob)" as BC
+participant "ServerView" as SV
+
+== Join ==
+Alice -> AV : enter "alice", JOIN CHAT
+AV -> AC : connect("alice")
+AC -> AH : JOIN|alice
+AH -> S : register(this)
+S -> SV : onClientConnected("alice")
+AH --> AC : WELCOME|alice|FULL
+AH -> S : log "Welcome alice"
+S -> SV : onLog(...)
+AH -> S : broadcast(SYS|alice joined the chat)
+S -> BH : send(...)
+BH --> BC : SYS|alice joined the chat
+
+== Send a message ==
+Alice -> AV : type "Hi", Enter / SEND
+AV -> AC : submit("Hi")
+AC -> AH : MSG|Hi
+AH -> AH : stamp time + username
+AH -> S : broadcast(MSG|15:42|alice|Hi)
+S -> AH : send(...)
+AH --> AC : MSG|15:42|alice|Hi
+S -> BH : send(...)
+BH --> BC : MSG|15:42|alice|Hi
+
+== allUsers ==
+Alice -> AV : type "allUsers"
+AV -> AC : submit("allUsers")
+AC -> AH : USERS
+AH -> S : getActiveUsers()
+AH --> AC : USERS|alice|bob
+AC -> AV : onUserList([alice, bob])
+
+== Leave ("end", "bye" or LEAVE) ==
+Alice -> AV : LEAVE
+AV -> AC : leave()
+AC -> AH : QUIT
+AC -> AC : close socket
+AH -> S : unregister(this)
+S -> SV : onClientDisconnected("alice")
+AH -> S : broadcast(SYS|alice left the chat)
+S -> BH : send(...)
+BH --> BC : SYS|alice left the chat
+@enduml

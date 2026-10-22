@@ -1,0 +1,41 @@
+@startuml use-case-diagram
+!pragma layout smetana
+title TCP Chat - Use Case Diagram
+left to right direction
+skinparam shadowing false
+
+actor "Chat user" as User
+actor "Read-only guest" as Guest
+actor "Server operator" as Op
+
+rectangle "TCP Chat Client" {
+  usecase "Join with a username" as UC1
+  usecase "Join without username\n(READ-ONLY MODE)" as UC2
+  usecase "Read group messages" as UC3
+  usecase "Send a message\n(SEND / Enter)" as UC4
+  usecase "List active users\n(allUsers)" as UC5
+  usecase "Leave\n(end / bye / LEAVE)" as UC6
+  usecase "See Online status" as UC7
+}
+
+rectangle "TCP Chat Server" {
+  usecase "Start server\n(port from server.properties)" as S1
+  usecase "Monitor connected users" as S2
+  usecase "View activity log" as S3
+}
+
+User --> UC1
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC6
+User --> UC7
+Guest --> UC2
+Guest --> UC3
+Guest --> UC5
+Guest --> UC6
+Guest --> UC7
+Op --> S1
+Op --> S2
+Op --> S3
+@enduml
