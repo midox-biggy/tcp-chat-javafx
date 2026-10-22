@@ -1,0 +1,5 @@
+target/
+dist/*.jar
+.idea/
+*.iml
+.DS_Store
